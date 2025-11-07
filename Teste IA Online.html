@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avaliação: Inteligência Artificial</title>
+    <!-- Carregando o Tailwind CSS para um visual moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Fonte personalizada para um visual mais amigável */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Efeito de botão pressionado */
+        .btn-answer:active {
+            transform: scale(0.98);
+        }
+        /* Classes para feedback visual */
+        .correct {
+            background-color: #84cc16 !important; /* lime-500 */
+            color: #000000 !important; /* Texto preto para melhor contraste */
+            border-color: #65a30d !important; /* lime-700 */
+        }
+        .incorrect {
+            background-color: #ef4444 !important; /* red-500 */
+            color: white !important;
+            border-color: #b91c1c !important; /* red-700 */
+        }
+
+        /* Estilos de Impressão (para o Relatório/PDF) */
+        @media print {
+            /* Esconde tudo que NÃO é o relatório */
+            body > *:not(#report-container) {
+                display: none;
+            }
+            
+            /* Garante que o container do relatório seja a única coisa visível */
+            #report-container {
+                display: block;
+                visibility: visible;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 20px;
+                box-shadow: none;
+                border: none;
+            }
+
+            /* Força um tema claro para impressão/PDF */
+            #report-area {
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
+
+            #report-area * {
+                color: #000000 !important;
+            }
+
+            #report-area .report-item {
+                background: #f4f4f5 !important; /* gray-100 */
+                border-color: #d4d4d8 !important; /* gray-300 */
+                page-break-inside: avoid; /* Evita que um item de resposta quebre no meio da página */
+            }
+
+            #report-area .report-title {
+                color: #000000 !important;
+            }
+
+            #report-area .report-correct {
+                color: #16a34a !important; /* green-600 */
+            }
+            
+            #report-area .report-incorrect {
+                color: #dc2626 !important; /* red-600 */
+            }
+
+            /* Esconde o botão de imprimir na própria impressão */
+            #print-btn {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Container principal do Quiz -->
+    <div id="quiz-container" class="bg-gray-800 w-full max-w-2xl p-6 sm:p-8 rounded-2xl shadow-2xl shadow-lime-500/20 transition-all duration-300">
+        
+        <!-- TELA DE INÍCIO (NOME) -->
+        <div id="start-area">
+            <!-- Logo Jumper -->
+            <div class="flex justify-center mb-4">
+                <img src="https://i.postimg.cc/m2Qyr8L7/LOGO-J-BRANCA-E-VERDE.png" alt="Logo Jumper" class="h-16 w-auto"
+                     onerror="this.style.display='none'; document.getElementById('logo-fallback').classList.remove('hidden');">
+                <!-- Fallback em texto caso a imagem falhe -->
+                <div id="logo-fallback" class="hidden text-lime-400 text-2xl font-bold">JUMPER</div>
+            </div>
+    
+            <!-- Cabeçalho do Quiz -->
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-center text-lime-400">Avaliação: Inteligência Artificial 🚀</h1>
+                <p class="text-center text-gray-300 mt-2">Teste seu conhecimento sobre o futuro da tecnologia.</p>
+            </div>
+            
+            <!-- Input de Nome -->
+            <div class="mb-6">
+                <label for="student-name" class="block text-lg font-semibold text-lime-400 mb-2 text-center">Digite seu nome para começar:</label>
+                <input type="text" id="student-name" class="w-full max-w-md mx-auto p-3 rounded-lg bg-gray-700 text-white border-2 border-gray-600 focus:border-lime-500 focus:ring-lime-500 outline-none" placeholder="Seu nome completo">
+                <p id="name-error" class="text-red-500 mt-2 text-center hidden">Por favor, digite seu nome.</p>
+            </div>
+            <button id="start-quiz-btn" class="w-full max-w-md mx-auto bg-lime-500 text-black font-bold py-3 px-8 rounded-lg shadow-md hover:bg-lime-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-opacity-50">
+                Começar a Avaliação!
+            </button>
+        </div>
+
+        <!-- CONTEÚDO DO QUIZ (ESCONDIDO INICIALMENTE) -->
+        <div id="quiz-content-area" class="hidden">
+            <!-- Logo Jumper (Menor) -->
+            <div class="flex justify-center mb-4">
+                <img src="https://i.postimg.cc/m2Qyr8L7/LOGO-J-BRANCA-E-VERDE.png" alt="Logo Jumper" class="h-12 w-auto">
+            </div>
+
+            <!-- Área da Pergunta -->
+            <div id="question-area" class="mb-6">
+                <h2 id="question-text" class="text-2xl font-semibold text-white mb-6 min-h-[60px]">Carregando pergunta...</h2>
+                <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Botões de resposta serão inseridos aqui pelo JavaScript -->
+                </div>
+            </div>
+
+            <!-- Controles de Navegação -->
+            <div class="mt-8 flex justify-between items-center">
+                <span id="question-counter" class="text-sm font-semibold text-gray-400"></span>
+                <button id="next-btn" class="hidden bg-lime-500 text-black font-bold py-3 px-6 rounded-lg shadow-md hover:bg-lime-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-opacity-50">
+                    Próxima &rarr;
+                </button>
+            </div>
+
+            <!-- Tela de Resultados (Inicialmente Oculta) -->
+            <div id="results-area" class="hidden text-center">
+                <h2 id="results-title" class="text-3xl font-bold text-lime-400 mb-4">Quiz Concluído!</h2>
+                <p id="results-text" class="text-xl text-gray-200 mb-6">Você acertou X de Y perguntas.</p>
+                <img id="results-image" src="https://placehold.co/300x200/000000/84CC16?text=Parab%C3%A9ns!" alt="Imagem de comemoração" class="mx-auto rounded-lg mb-6">
+                <button id="restart-btn" class="bg-lime-500 text-black font-bold py-3 px-8 rounded-lg shadow-md hover:bg-lime-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-opacity-50">
+                    Tentar Novamente
+                </button>
+                <!-- BOTÃO DE RELATÓRIO -->
+                <button id="show-report-btn" class="hidden mt-4 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                    Ver Gabarito / Gerar Relatório
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container do Relatório (fica fora do quiz-container para impressão) -->
+    <div id="report-container" class="hidden w-full max-w-2xl">
+        <div id="report-area" class="mt-8 text-left p-6 bg-gray-700 rounded-lg">
+            <!-- Conteúdo do relatório será gerado aqui via JS -->
+        </div>
+    </div>
+
+
+    <script>
+        // --- 1. DEFINIÇÃO DAS PERGUNTAS (Baseadas nos slides de IA) ---
+        const questions = [
+            {
+                question: "O que é Inteligência Artificial, de acordo com a apresentação?",
+                answers: [
+                    { text: "Um robô com consciência própria, como nos filmes.", correct: false },
+                    { text: "Máquinas que simulam capacidades humanas como aprender e raciocinar.", correct: true },
+                    { text: "Um programa de computador que apenas segue regras fixas.", correct: false },
+                    { text: "Apenas aplicativos de chat como o ChatGPT.", correct: false }
+                ]
+            },
+            {
+                question: "Em que ano o termo 'Inteligência Artificial' foi oficialmente criado na Conferência de Dartmouth?",
+                answers: [
+                    { text: "1950 (Teste de Turing)", correct: false },
+                    { text: "1997 (Deep Blue)", correct: false },
+                    { text: "1956", correct: true },
+                    { text: "2010 (Deep Learning)", correct: false }
+                ]
+            },
+            {
+                question: "O que foi o 'Teste de Turing', proposto por Alan Turing?",
+                answers: [
+                    { text: "Um teste de velocidade de processamento do computador.", correct: false },
+                    { text: "Um teste para ver se um robô consegue andar.", correct: false },
+                    { text: "Um teste para medir se uma máquina é indistinguível de um humano em uma conversa.", correct: true },
+                    { text: "Um teste de xadrez para IAs.", correct: false }
+                ]
+            },
+            {
+                question: "Qual computador da IBM venceu o campeão mundial de xadrez Garry Kasparov em 1997?",
+                answers: [
+                    { text: "ChatGPT", correct: false },
+                    { text: "Deep Blue", correct: true },
+                    { text: "Gemini", correct: false },
+                    { text: "Alan Turing", correct: false }
+                ]
+            },
+            {
+                question: "Quais são os 3 pilares que causaram o 'Boom' moderno da IA (a partir de 2010)?",
+                answers: [
+                    { text: "Computadores mais rápidos, internet e celulares.", correct: false },
+                    { text: "Big Data (muitos dados), GPUs (placas de vídeo) e Algoritmos (Deep Learning).", correct: true },
+                    { text: "Chatbots, redes sociais e GPS.", correct: false },
+                    { text: "Eletricidade, internet e Wi-Fi.", correct: false }
+                ]
+            },
+            {
+                question: "Em qual destes domínios a IA (Artificial) supera a Inteligência Humana?",
+                answers: [
+                    { text: "Criatividade e Senso Comum.", correct: false },
+                    { text: "Contexto e Emoção.", correct: false },
+                    { text: "Velocidade de processamento e análise de Padrões Lógicos.", correct: true },
+                    { text: "Empatia e tomada de decisão complexa.", correct: false }
+                ]
+            },
+            {
+                question: "Qual tipo de IA usa Redes Neurais Artificiais para imitar vagamente a estrutura do cérebro humano?",
+                answers: [
+                    { text: "Machine Learning (Geral)", correct: false },
+                    { text: "Sistemas Especialistas (Antigos)", correct: false },
+                    { text: "IA de Programação", correct: false },
+                    { text: "Deep Learning (Aprendizado Profundo)", correct: true }
+                ]
+            },
+            {
+                question: "Como se chama a IA que temos HOJE, que é especialista em UMA tarefa (ex: Waze só faz trânsito)?",
+                answers: [
+                    { text: "AGI (Inteligência Geral Artificial)", correct: false },
+                    { text: "IA de Ficção Científica", correct: false },
+                    { text: "ANI (Inteligência Estreita Artificial)", correct: true },
+                    { text: "IA Consciente", correct: false }
+                ]
+            },
+            {
+                question: "Como se chama a IA 'dos filmes', com consciência e capaz de aprender TUDO, que ainda NÃO existe?",
+                answers: [
+                    { text: "ANI (Inteligível Estreita Artificial)", correct: false },
+                    { text: "Deep Learning", correct: false },
+                    { text: "Machine Learning", correct: false },
+                    { text: "AGI (Inteligência Geral Artificial)", correct: true }
+                ]
+            },
+            {
+                question: "Qual a principal diferença da 'IA Generativa' (como o ChatGPT)?",
+                answers: [
+                    { text: "Ela CRIA conteúdo novo (textos, imagens) em vez de apenas ANALISAR dados.", correct: true },
+                    { text: "Ela é mais rápida que as IAs antigas.", correct: false },
+                    { text: "Ela só funciona em celulares.", correct: false },
+                    { text: "Ela é 100% precisa e nunca comete erros.", correct: false }
+                ]
+            },
+            {
+                question: "O que significa a sigla 'LLM', o cérebro por trás dos chats de IA?",
+                answers: [
+                    { text: "Logic Language Machine (Máquina de Linguagem Lógica)", correct: false },
+                    { text: "Large Language Models (Modelos de Linguagem Grandes)", correct: true },
+                    { text: "Learning Logic Machine (Máquina de Aprendizado Lógico)", correct: false },
+                    { text: "Linguagem de Modelo Local", correct: false }
+                ]
+            },
+            {
+                question: "Qual IA, do Google, tem como vantagem ser 'multimodal nativa' (entende texto, imagem, áudio e vídeo de forma integrada)?",
+                answers: [
+                    { text: "Grok (xAI)", correct: false },
+                    { text: "Deep Blue (IBM)", correct: false },
+                    { text: "ChatGPT (OpenAI)", correct: false },
+                    { text: "Gemini (Google)", correct: true }
+                ]
+            },
+            {
+                question: "Qual IA, de Elon Musk (xAI), tem como diferencial o acesso em tempo real aos dados do 'X' (antigo Twitter)?",
+                answers: [
+                    { text: "Grok", correct: true },
+                    { text: "Gemini", correct: false },
+                    { text: "GPT-4", correct: false },
+                    { text: "Deep Blue", correct: false }
+                ]
+            },
+            {
+                question: "Como a IA é usada HOJE na medicina, segundo os slides?",
+                answers: [
+                    { text: "Para substituir 100% os médicos.", correct: false },
+                    { text: "Para detectar tumores em exames (Raio-X, etc.) com alta precisão.", correct: true },
+                    { text: "Apenas para agendar consultas online.", correct: false },
+                    { text: "Ainda não é usada na medicina.", correct: false }
+                ]
+            },
+            {
+                question: "O que é o 'GitHub Copilot' na área de programação?",
+                answers: [
+                    { text: "Um programa que testa a velocidade da internet.", correct: false },
+                    { text: "Um 'Co-piloto' de IA que ajuda programadores a escrever código.", correct: true },
+                    { text: "Um robô que monta computadores.", correct: false },
+                    { text: "Um antivírus baseado em IA.", correct: false }
+                ]
+            },
+            {
+                question: "Qual é a nova profissão que atua como um 'tradutor' da IA, especialista em fazer as perguntas certas?",
+                answers: [
+                    { text: "Auditor de Ética de IA", correct: false },
+                    { text: "Engenheiro de Prompt", correct: true },
+                    { text: "Gestor de IA", correct: false },
+                    { text: "Programador de Deep Learning", correct: false }
+                ]
+            },
+            {
+                question: "Qual nova profissão atua como o 'maestro', decidindo ONDE e COMO usar IA de forma estratégica na empresa?",
+                answers: [
+                    { text: "Gestor de IA / Estrategista de IA", correct: true },
+                    { text: "Engenheiro de Prompt", correct: false },
+                    { text: "Técnico de Manutenção de IA", correct: false },
+                    { text: "Auditor de Ética de IA", correct: false }
+                ]
+            },
+            {
+                question: "Qual a conclusão da apresentação sobre IA e o mercado de trabalho?",
+                answers: [
+                    { text: "A IA vai tomar o emprego de todo mundo.", correct: false },
+                    { text: "A IA não vai tomar o seu emprego, mas uma pessoa que sabe usar IA vai.", correct:true },
+                    { text: "A IA não terá impacto nos empregos.", correct: false },
+                    { text: "Apenas programadores precisam se preocupar com IA.", correct: false }
+                ]
+            }
+        ];
+
+        // --- 2. ELEMENTOS DO DOM ---
+        const quizContainer = document.getElementById('quiz-container');
+        // Novos elementos da Tela de Início
+        const startArea = document.getElementById('start-area');
+        const startQuizBtn = document.getElementById('start-quiz-btn');
+        const studentNameInput = document.getElementById('student-name');
+        const nameError = document.getElementById('name-error');
+        
+        // Elementos do Quiz
+        const quizContentArea = document.getElementById('quiz-content-area');
+        const questionArea = document.getElementById('question-area');
+        const questionText = document.getElementById('question-text');
+        const answerButtons = document.getElementById('answer-buttons');
+        const nextBtn = document.getElementById('next-btn');
+        const questionCounter = document.getElementById('question-counter');
+        
+        // Elementos de Resultado
+        const resultsArea = document.getElementById('results-area');
+        const resultsTitle = document.getElementById('results-title');
+        const resultsText = document.getElementById('results-text');
+        const resultsImage = document.getElementById('results-image');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // --- 3. VARIÁVEIS DE ESTADO DO QUIZ ---
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userAnswers = []; // Array para guardar as respostas
+        let studentName = ""; // Variável para guardar o nome
+        let shuffledQuestions = []; // Array para as perguntas embaralhadas (agora vamos usar)
+
+        // --- 4. FUNÇÕES PRINCIPAIS ---
+
+        /** Inicia o quiz ou reinicia ele */
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = []; 
+            resultsArea.classList.add('hidden');
+            questionArea.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+            nextBtn.textContent = "Próxima \u2192"; 
+            questionCounter.classList.remove('hidden');
+            
+            document.getElementById('show-report-btn').classList.add('hidden');
+            document.getElementById('report-container').classList.add('hidden');
+            
+            quizContainer.classList.remove('hidden'); // Garante que o container principal está visível
+            quizContentArea.classList.remove('hidden'); // Garante que a área do quiz está visível
+            startArea.classList.add('hidden'); // Garante que a área de início está escondida
+
+            // Embaralha as perguntas para ser diferente a cada tentativa
+            shuffledQuestions = [...questions].sort(() => Math.random() - 0.5);
+            
+            showQuestion();
+        }
+
+        /** Mostra a pergunta atual na tela */
+        function showQuestion() {
+            resetState();
+            let currentQuestion = shuffledQuestions[currentQuestionIndex];
+            let questionNo = currentQuestionIndex + 1;
+            
+            questionText.textContent = `${questionNo}. ${currentQuestion.question}`;
+            questionCounter.textContent = `Pergunta ${questionNo} de ${shuffledQuestions.length}`;
+
+            // Embaralha as respostas da pergunta atual
+            let currentAnswers = [...currentQuestion.answers].sort(() => Math.random() - 0.5);
+
+            currentAnswers.forEach(answer => {
+                const button = document.createElement('button');
+                button.innerHTML = answer.text;
+                button.classList.add('btn-answer', 'w-full', 'p-4', 'border-2', 'border-gray-600', 'rounded-lg', 'text-left', 'text-gray-200', 'font-semibold', 'transition-all', 'duration-200', 'hover:bg-gray-700', 'hover:border-lime-500', 'focus:outline-none', 'focus:ring-2', 'focus:ring-lime-500');
+                answerButtons.appendChild(button);
+
+                if (answer.correct) {
+                    button.dataset.correct = answer.correct;
+                }
+                button.addEventListener('click', selectAnswer);
+            });
+        }
+
+        /** Limpa o estado anterior (botões, classes) */
+        function resetState() {
+            nextBtn.classList.add('hidden');
+            while (answerButtons.firstChild) {
+                answerButtons.removeChild(answerButtons.firstChild);
+            }
+        }
+
+        /** Chamada quando uma resposta é clicada */
+        function selectAnswer(e) {
+            const selectedBtn = e.target;
+            const isCorrect = selectedBtn.dataset.correct === 'true';
+            
+            // Prepara o objeto de resposta para o relatório
+            const question = shuffledQuestions[currentQuestionIndex].question;
+            const selectedText = selectedBtn.innerHTML;
+            let correctAnswerText = "";
+
+            if (isCorrect) {
+                selectedBtn.classList.add('correct');
+                score++;
+            } else {
+                selectedBtn.classList.add('incorrect');
+            }
+
+            // Mostra qual era a correta (caso o usuário erre)
+            Array.from(answerButtons.children).forEach(button => {
+                if (button.dataset.correct === 'true') {
+                    button.classList.add('correct');
+                    correctAnswerText = button.innerHTML; // Salva o texto da resposta correta
+                }
+                // Desabilita todos os botões
+                button.disabled = true;
+                button.classList.remove('hover:bg-gray-700', 'hover:border-lime-500');
+            });
+
+            // Adiciona a resposta ao array para o relatório
+            userAnswers.push({
+                question: question,
+                selected: selectedText,
+                correct: isCorrect,
+                correctAnswer: isCorrect ? selectedText : correctAnswerText
+            });
+
+            // Prepara o botão "Próxima"
+            if (shuffledQuestions.length > currentQuestionIndex + 1) {
+                nextBtn.classList.remove('hidden');
+            } else {
+                nextBtn.textContent = "Ver Resultados";
+                nextBtn.classList.remove('hidden');
+            }
+        }
+
+        /** Mostra a tela de resultados finais */
+        function showResults() {
+            questionArea.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+            questionCounter.classList.add('hidden');
+
+            resultsArea.classList.remove('hidden');
+            // Mostra o botão de relatório
+            document.getElementById('show-report-btn').classList.remove('hidden');
+            
+            resultsText.textContent = `Você acertou ${score} de ${shuffledQuestions.length} perguntas!`;
+
+            let title = "";
+            let imageText = "";
+            const percentage = score / shuffledQuestions.length;
+
+
+            if (percentage === 1) {
+                title = "PERFEITO! 🤩";
+                imageText = "Especialista+em+IA!"; // MUDADO
+            } else if (percentage >= 0.7) {
+                title = "Mandou Bem! 👍";
+                imageText = "Quase+l%C3%A1!"; // MANTIDO
+            } else if (percentage >= 0.5) {
+                title = "Nada Mal!";
+                imageText = "Continue+Estudando!"; // MUDADO
+            } else {
+                title = "Ops... 😅";
+                imageText = "Tente+de+Novo!"; // MANTIDO
+            }
+
+            resultsTitle.textContent = title;
+            resultsImage.src = `https://placehold.co/300x200/000000/84CC16?text=${imageText}`; // Cor mantida do template
+        }
+
+        /** Passa para a próxima pergunta ou mostra os resultados */
+        function handleNextButton() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < shuffledQuestions.length) {
+                showQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        // --- 5. NOVA FUNÇÃO PARA GERAR O RELATÓRIO ---
+        function generateReport() {
+            const reportArea = document.getElementById('report-area');
+            const reportContainer = document.getElementById('report-container');
+            let reportHTML = "";
+
+            // Esconde o container do quiz
+            quizContainer.classList.add('hidden');
+
+            // Título e Pontuação
+            reportHTML += `<h3 class="text-2xl font-bold text-lime-400 mb-4 text-center report-title">Gabarito Detalhado</h3>`;
+            // ADICIONA O NOME DO ALUNO AO RELATÓRIO
+            reportHTML += `<p class="text-white text-xl text-center mb-4"><strong>Aluno:</strong> ${studentName}</p>`;
+            reportHTML += `<p class="text-white text-lg text-center mb-6"><strong>Pontuação Final:</strong> ${score} de ${shuffledQuestions.length}</p>`;
+
+            // Loop pelas respostas do usuário
+            userAnswers.forEach((answer, index) => {
+                reportHTML += `<div class="mb-4 p-4 bg-gray-800 rounded-md border border-gray-600 report-item">`;
+                reportHTML += `<p class="text-white font-semibold"><strong>Questão ${index + 1}:</strong> ${answer.question}</p>`;
+                
+                if (answer.correct) {
+                    reportHTML += `<p class="text-lime-400 mt-2 report-correct"><strong>Sua Resposta:</strong> ${answer.selected} (Correta ✔)</p>`;
+                } else {
+                    reportHTML += `<p class="text-red-500 mt-2 report-incorrect"><strong>Sua Resposta:</strong> ${answer.selected} (Incorreta ✖)</p>`;
+                    reportHTML += `<p class="text-gray-300 mt-1"><strong>Resposta Certa:</strong> ${answer.correctAnswer}</p>`;
+                }
+                reportHTML += `</div>`;
+            });
+
+            // Botão de Imprimir / Salvar PDF
+            reportHTML += `<button id="print-btn" class="w-full mt-6 bg-green-500 text-black font-bold py-3 px-8 rounded-lg shadow-md hover:bg-green-600 transition-all duration-200 focus:outline-none">
+                                Salvar como PDF / Imprimir Relatório
+                           </button>`;
+
+            // Preenche e mostra o relatório
+            reportArea.innerHTML = reportHTML;
+            reportContainer.classList.remove('hidden');
+
+            // Adiciona o listener ao botão de imprimir
+            // (Precisa ser feito aqui pois o botão acabou de ser criado)
+            document.getElementById('print-btn').addEventListener('click', () => {
+                window.print(); // Abre a caixa de diálogo de impressão
+            });
+        }
+
+
+        // --- 6. EVENT LISTENERS ---
+        nextBtn.addEventListener('click', handleNextButton);
+        restartBtn.addEventListener('click', () => {
+            // Ao reiniciar, volta para a tela de início
+            quizContentArea.classList.add('hidden');
+            resultsArea.classList.add('hidden');
+            startArea.classList.remove('hidden');
+            studentNameInput.value = ""; // Limpa o nome
+        });
+        
+        // Listener para o botão de relatório
+        document.getElementById('show-report-btn').addEventListener('click', generateReport);
+
+        // NOVO: Listener para o botão de INICIAR o Quiz
+        startQuizBtn.addEventListener('click', () => {
+            studentName = studentNameInput.value.trim();
+            if (studentName === "") {
+                nameError.classList.remove('hidden');
+            } else {
+                nameError.classList.add('hidden');
+                startArea.classList.add('hidden');
+                quizContentArea.classList.remove('hidden');
+                startQuiz(); // Chama a função para configurar a primeira questão
+            }
+        });
+        
+        // Listener para começar com Enter no campo de nome
+        studentNameInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Impede o comportamento padrão do Enter (como submeter um formulário)
+                startQuizBtn.click(); // Simula o clique no botão de iniciar
+            }
+        });
+
+
+        // --- O QUIZ NÃO COMEÇA AUTOMATICAMENTE ---
+        // A chamada startQuiz() foi removida daqui e colocada no listener do startQuizBtn
+
+    </script>
+</body>
+</html>
